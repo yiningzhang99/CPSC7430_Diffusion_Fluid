@@ -21,6 +21,8 @@ def parse_args_and_config():
     parser.add_argument('--t', type=int, default=400, help='Sampling noise scale')
     parser.add_argument('--r', dest='reverse_steps', type=int, default=20, help='Revserse steps')
     parser.add_argument('--comment', type=str, default='', help='Comment')
+    parser.add_argument('--max_batches', type=int, default=-1,
+                        help='[local] stop after this many test batches (-1 = all, original behaviour)')
     args = parser.parse_args()
 
     # parse config file

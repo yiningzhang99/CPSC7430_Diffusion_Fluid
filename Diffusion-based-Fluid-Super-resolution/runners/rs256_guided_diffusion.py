@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
+import torch.fft  # [local] required on PyTorch 1.7: makes torch.fft the module (fft2, irfft2) instead of the legacy function
 import torchvision.utils as tvu
 import torch.nn.functional as F
 import torchvision.transforms as transforms
@@ -164,7 +165,9 @@ def make_image_grid(images, out_path, ncols=10):
     # assume images in the shape of (N, T, H, W)
     t, h, w = images.shape
     images = images.detach().cpu().numpy()
-    b = t // ncols
+    # [local] original used b = t // ncols, which is 0 rows (-> IndexError) when batch < ncols
+    ncols = min(ncols, t)
+    b = math.ceil(t / ncols)
     fig = plt.figure(figsize=(8., 8.))
     grid = ImageGrid(fig, 111,  # similar to subplot(111)
                      nrows_ncols=(b, ncols),  # creates 2x2 grid of axes
@@ -205,7 +208,7 @@ def voriticity_residual(w, re=1000.0, dt=1/32, calc_grad=True):
     ny = w.size(3)
     device = w.device
 
-    w_h = torch.fft.fft2(w[:, 1:-1], dim=[2, 3])
+    w_h = torch.fft.fftn(w[:, 1:-1], dim=[2, 3])
     # Wavenumbers in y-direction
     k_max = nx//2
     N = nx
@@ -226,11 +229,11 @@ def voriticity_residual(w, re=1000.0, dt=1/32, calc_grad=True):
     wy_h = 1j * k_y * w_h
     wlap_h = -lap * w_h
 
-    u = torch.fft.irfft2(u_h[..., :, :k_max + 1], dim=[2, 3])
-    v = torch.fft.irfft2(v_h[..., :, :k_max + 1], dim=[2, 3])
-    wx = torch.fft.irfft2(wx_h[..., :, :k_max + 1], dim=[2, 3])
-    wy = torch.fft.irfft2(wy_h[..., :, :k_max + 1], dim=[2, 3])
-    wlap = torch.fft.irfft2(wlap_h[..., :, :k_max + 1], dim=[2, 3])
+    u = torch.fft.irfftn(u_h[..., :, :k_max + 1], dim=[2, 3])
+    v = torch.fft.irfftn(v_h[..., :, :k_max + 1], dim=[2, 3])
+    wx = torch.fft.irfftn(wx_h[..., :, :k_max + 1], dim=[2, 3])
+    wy = torch.fft.irfftn(wy_h[..., :, :k_max + 1], dim=[2, 3])
+    wlap = torch.fft.irfftn(wlap_h[..., :, :k_max + 1], dim=[2, 3])
     advection = u*wx + v*wy
 
     wt = (w[:, 2:, :, :] - w[:, :-2, :, :]) / (2 * dt)
@@ -325,7 +328,12 @@ class Diffusion(object):
         residual_loss_all = np.zeros((ref_data.shape[0], self.args.repeat_run, self.args.sample_step))
 
 
+        n_done = ref_data.shape[0]
         for batch_index, (blur_data, data) in enumerate(test_loader):
+            # [local] optional early stop so a smoke test does not run all 1272 test samples
+            if getattr(self.args, 'max_batches', -1) > 0 and batch_index >= self.args.max_batches:
+                n_done = batch_index * self.config.sampling.batch_size
+                break
             self.log('Batch: {} / Total batch {}'.format(batch_index, len(test_loader)))
             x0 = blur_data.to(self.device)
 
@@ -438,6 +446,8 @@ class Diffusion(object):
             self.log('Finished batch {}'.format(batch_index))
             self.log('========================================================')
         self.log('Finished sampling')
+        # [local] only average over the samples that were actually processed
+        l2_loss_all, residual_loss_all = l2_loss_all[:n_done], residual_loss_all[:n_done]
         self.log(f'mean l2 loss: {l2_loss_all[..., -1].mean()}')
         self.log(f'std l2 loss: {l2_loss_all[..., -1].std(axis=1).mean()}')
         self.log(f'mean residual loss: {residual_loss_all[..., -1].mean()}')

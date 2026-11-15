@@ -443,7 +443,7 @@ class KMFlowTensorDataset(Dataset):
             self.cache[id] = frame
 
             if len(self.cache) > self.max_cache_len:
-                self.cache.pop(self.cache.keys()[np.random.choice(len(self.cache.keys()))])
+                self.cache.pop(list(self.cache.keys())[np.random.choice(len(self.cache))])  # [local] py3: dict_keys is not indexable
             return frame
 
 

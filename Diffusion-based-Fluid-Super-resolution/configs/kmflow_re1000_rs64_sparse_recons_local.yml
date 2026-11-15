@@ -1,0 +1,45 @@
+# [local] 64x64 SDEdit reconstruction with our own short-trained baseline DDPM.
+# Based on kmflow_re1000_rs256_sparse_recons.yml; model section must match train_ddpm/configs/km_re1000_rs64.yml.
+log_dir: "./experiments/kmflow_re1000_rs64_local"
+
+data:
+    dataset: "kmflow"
+    category: "kmflow"
+    image_size: 64                                          # [local] 256 -> 64
+    channels: 3
+    num_workers: 0                                          # [local] Windows
+    data_dir: "../data/kf_2d_re1000_64_40seed.npy"          # [local] avg-pooled 64x64 ground truth
+    sample_data_dir: "../data/kmflow_lowres_u16_from64.npz" # [local] 64 -avg-> 16 -nearest-> 64
+    stat_path: "./pretrained_weights/km256_stats.npz"       # (unused by the runner)
+    data_kw: 'u1616_nearest'                                # [local]
+    smoothing: False
+    smoothing_scale: 5
+
+model:
+    type: "simple"
+    in_channels: 3
+    out_ch: 3
+    ch: 64
+    ch_mult: [ 1, 1, 2 ]          # [local] must match training config
+    num_res_blocks: 1
+    attn_resolutions: [ ]         # [local] must match training config
+    dropout: 0.0
+    var_type: fixedlarge
+    ema_rate: 0.999
+    ema: True
+    resamp_with_conv: True
+    conv_out_padding: circular    # [local] match train_ddpm/models/diffusion.py (zero padding here gave 3.8x border artifacts)
+    ckpt_path: "./train_ddpm/experiments/km64_baseline/logs/km64_baseline/ckpt.pth"  # [local] runner loads ckpt[-1] = EMA weights
+
+diffusion:
+    beta_schedule: linear
+    beta_start: 0.0001
+    beta_end: 0.02
+    num_diffusion_timesteps: 1000
+
+sampling:
+    batch_size: 20                # 64x64 is cheap; use with --max_batches to limit the number of test samples
+    last_only: True
+    lambda_: 0.
+    log_loss: True
+    dump_arr: True

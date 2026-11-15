@@ -1,0 +1,43 @@
+log_dir: "./experiments/kmflow_re1000_rs256_local"
+
+data:
+    dataset: "kmflow"
+    category: "kmflow"
+    image_size: 256
+    channels: 3
+    num_workers: 0
+    data_dir: "../data/kf_2d_re1000_256_40seed.npy"
+    sample_data_dir: "../data/kmflow_lowres_u32.npz"
+    stat_path: "./pretrained_weights/km256_stats.npz"
+    data_kw: 'u3232_nearest'
+    smoothing: False
+    smoothing_scale: 5
+
+model:
+    type: "simple"
+    in_channels: 3
+    out_ch: 3
+    ch: 64
+    ch_mult: [ 1, 1, 1, 2 ]
+    num_res_blocks: 1
+    attn_resolutions: [ 16, ]
+    dropout: 0.0
+    var_type: fixedlarge
+    ema_rate: 0.9999
+    ema: True
+    resamp_with_conv: True
+    conv_out_padding: circular    # [local] pretrained ckpt was trained with circular conv_out (border eps error 10x lower)
+    ckpt_path: "./pretrained_weights/baseline_ckpt.pth"
+
+diffusion:
+    beta_schedule: linear
+    beta_start: 0.0001
+    beta_end: 0.02
+    num_diffusion_timesteps: 1000
+
+sampling:
+    batch_size: 1
+    last_only: True
+    lambda_: 0.
+    log_loss: True
+    dump_arr: True

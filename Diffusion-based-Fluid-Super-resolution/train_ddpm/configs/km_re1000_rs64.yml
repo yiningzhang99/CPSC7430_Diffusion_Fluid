@@ -1,0 +1,56 @@
+# [local] 64x64 version of km_re1000_rs256.yml (unconditional baseline DDPM).
+# Changes vs. the 256 config are marked with "# [local]".
+data:
+    dataset: "kolmogorov flow"
+    data_dir: "../../data/kf_2d_re1000_64_40seed.npy"   # [local] 4x avg-pooled data (downsample_kf.py)
+    stat_path: "./km64_stats.npz"                       # [local] new file; computed from train split on first run
+    image_size: 64                                      # [local] 256 -> 64
+    channels: 3
+    logit_transform: false
+    uniform_dequantization: false
+    gaussian_dequantization: false
+    random_flip: false
+    rescaled: false
+    num_workers: 0                                      # [local] 4 -> 0 (Windows spawn; data is already in RAM)
+
+model:
+    type: "simple"
+    in_channels: 3
+    out_ch: 3
+    ch: 64
+    ch_mult: [1, 1, 2]       # [local] [1,1,1,2] -> [1,1,2]: 3 -> 2 downsamplings, 64->32->16 (256 model: 256->32)
+    num_res_blocks: 1
+    attn_resolutions: []     # [local] [16] -> []: the 256 model never reached 16x16, so it had no level attention,
+                             #         only the mid-block attention; keep it that way at 64 (mid block is now 16x16)
+    dropout: 0.1
+    var_type: fixedlarge
+    ema_rate: 0.999          # [local] 0.9999 -> 0.999: EMA has no warm-up; after 5k steps 0.9999^5000 = 0.61 of the
+                             #         random init would remain in the EMA weights used for sampling
+    ema: True
+    resamp_with_conv: True
+
+diffusion:
+    beta_schedule: linear
+    beta_start: 0.0001
+    beta_end: 0.02
+    num_diffusion_timesteps: 1000
+
+training:
+    batch_size: 32
+    n_epochs: 14             # [local] the loop only stops on n_epochs (n_iters is unused); 14 x 358 steps ~ 5000 steps
+    n_iters: 5000
+    snapshot_freq: 1000      # [local] 10000 -> 1000
+    validation_freq: 2000
+
+sampling:
+    batch_size: 32
+    last_only: True
+
+optim:
+    weight_decay: 0.000
+    optimizer: "Adam"
+    lr: 0.0002
+    beta1: 0.9
+    amsgrad: false
+    eps: 0.00000001
+    grad_clip: 1.0

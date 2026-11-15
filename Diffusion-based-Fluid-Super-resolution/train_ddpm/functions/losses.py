@@ -1,4 +1,5 @@
 import torch
+import torch.fft  # [local] required on PyTorch 1.7: makes torch.fft the module (fft2, irfft2) instead of the legacy function
 import numpy as np
 
 
@@ -11,7 +12,7 @@ def voriticity_residual(w, re=1000.0, dt=1/32):
     ny = w.size(3)
     device = w.device
 
-    w_h = torch.fft.fft2(w[:, 1:-1], dim=[2, 3])
+    w_h = torch.fft.fftn(w[:, 1:-1], dim=[2, 3])
     # Wavenumbers in y-direction
     k_max = nx//2
     N = nx
@@ -32,11 +33,11 @@ def voriticity_residual(w, re=1000.0, dt=1/32):
     wy_h = 1j * k_y * w_h
     wlap_h = -lap * w_h
 
-    u = torch.fft.irfft2(u_h[..., :, :k_max + 1], dim=[2, 3])
-    v = torch.fft.irfft2(v_h[..., :, :k_max + 1], dim=[2, 3])
-    wx = torch.fft.irfft2(wx_h[..., :, :k_max + 1], dim=[2, 3])
-    wy = torch.fft.irfft2(wy_h[..., :, :k_max + 1], dim=[2, 3])
-    wlap = torch.fft.irfft2(wlap_h[..., :, :k_max + 1], dim=[2, 3])
+    u = torch.fft.irfftn(u_h[..., :, :k_max + 1], dim=[2, 3])
+    v = torch.fft.irfftn(v_h[..., :, :k_max + 1], dim=[2, 3])
+    wx = torch.fft.irfftn(wx_h[..., :, :k_max + 1], dim=[2, 3])
+    wy = torch.fft.irfftn(wy_h[..., :, :k_max + 1], dim=[2, 3])
+    wlap = torch.fft.irfftn(wlap_h[..., :, :k_max + 1], dim=[2, 3])
     advection = u*wx + v*wy
 
     wt = (w[:, 2:, :, :] - w[:, :-2, :, :]) / (2 * dt)
