@@ -1,0 +1,6 @@
+run: Diffusion-based-Fluid-Super-resolution/experiments/kmflow_re1000_rs64_local/recons_u1616_nearest_t240_r30_lam0.0
+frames: 100  (64x64, LR 16x16)
+method                RMSE            rel L2
+nearest      2.9427 ± 0.2746     0.5375 ± 0.0406
+bicubic      2.0837 ± 0.4642     0.3798 ± 0.0816
+SDEdit       2.5591 ± 0.3986     0.4670 ± 0.0672

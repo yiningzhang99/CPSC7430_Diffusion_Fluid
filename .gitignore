@@ -1,0 +1,9 @@
+# data and generated artifacts
+data/
+experiments/
+runs/
+*.pth
+Diffusion-based-Fluid-Super-resolution/train_ddpm/km64_stats.npz
+Diffusion-based-Fluid-Super-resolution/train_ddpm/*.log
+__pycache__/
+*.pyc
